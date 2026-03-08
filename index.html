@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACL XCODE - Full Control Panel</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { 
+            background-color: #121212; 
+            color: #00ffcc; 
+            font-family: monospace; 
+            text-align: center; 
+            padding: 20px; 
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .box { 
+            background: #1e1e1e; 
+            padding: 20px; 
+            border-radius: 10px; 
+            display: inline-block; 
+            box-shadow: 0 0 15px #00ffcc; 
+            width: 90%; 
+            max-width: 500px; 
+            margin-bottom: 20px;
+        }
+        .config-box {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px #00ffcc;
+            width: 95%;
+            max-width: 1100px;
+            margin: 20px auto;
+        }
+        .config-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            text-align: left;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #00ffcc;
+        }
+        .section h3 {
+            color: #00ffcc;
+            margin-top: 0;
+            border-bottom: 1px solid #00ffcc;
+            padding-bottom: 5px;
+        }
+        input, select, textarea { 
+            width: 100%; 
+            padding: 8px; 
+            margin: 5px 0 10px 0; 
+            background: #000; 
+            border: 1px solid #00ffcc; 
+            color: white; 
+            border-radius: 5px; 
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            width: calc(50% - 5px);
+            background: #1e1e1e;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+            margin-bottom: 0;
+        }
+        .checkbox-item label {
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: #2a2a2a;
+            font-weight: bold;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: #2a2a2a;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: monospace;
+            border: 1px solid transparent;
+        }
+        .tab-btn.active {
+            border-color: #00ffcc;
+            color: #00ffcc;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .btn-start { background-color: #00cc00; color: white; }
+        .btn-stop { background-color: #cc0000; color: white; }
+        .btn-save { background-color: #0066cc; color: white; }
+        .btn-update { background-color: #cc6600; color: white; }
+        button { 
+            padding: 12px 20px; 
+            font-size: 16px; 
+            margin: 5px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 5px; 
+            font-weight: bold;
+            font-family: monospace;
+        }
+        .preset-btn {
+            background: #333;
+            color: #fff;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .array-input {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .array-input input {
+            flex: 1;
+        }
+        .array-input button {
+            padding: 8px 15px;
+            margin: 0;
+        }
+        .array-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .array-tag {
+            background: #00ffcc;
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .array-tag button {
+            background: none;
+            border: none;
+            color: #000;
+            padding: 0;
+            font-size: 14px;
+            margin: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="box">
+            <div class="config-header">
+                <h2>🚀 ACL XCODE PANEL</h2>
+                <span class="status-badge" id="statusTxt" style="color: yellow;">Menunggu...</span>
+            </div>
+            
+            <label style="text-align: left; display: block;">Webhook Discord:</label>
+            <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/..." />
+            
+            <label style="text-align: left; display: block;">Link Private Server (PS):</label>
+            <input type="text" id="linkPs" placeholder="https://www.roblox.com/games/..." />
+            
+            <button class="btn-start" onclick="sendCommand('START')">▶ START ALL</button>
+            <button class="btn-stop" onclick="sendCommand('STOP')">⏹ STOP ALL</button>
+            <button class="btn-save" onclick="saveConfig()">💾 SAVE CONFIG</button>
+            <button class="btn-update" onclick="loadConfig()">🔄 LOAD CONFIG</button>
+        </div>
+
+        <div class="config-box">
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('toggles')">⚙️ Toggles</button>
+                <button class="tab-btn" onclick="switchTab('dropdowns')">📋 Dropdowns</button>
+                <button class="tab-btn" onclick="switchTab('inputs')">⌨️ Inputs</button>
+                <button class="tab-btn" onclick="switchTab('multidropdowns')">🔧 Multi Dropdowns</button>
+                <button class="tab-btn" onclick="switchTab('presets')">🎮 Presets</button>
+            </div>
+
+            <!-- Toggles Tab -->
+            <div id="toggles-tab" class="tab-content active">
+                <h3>Toggle Settings</h3>
+                <div class="config-section">
+                    <div class="section">
+                        <div class="checkbox-group" id="toggles-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dropdowns Tab -->
+            <div id="dropdowns-tab" class="tab-content">
+                <h3>Dropdown Settings</h3>
+                <div class="config-section" id="dropdowns-container"></div>
+            </div>
+
+            <!-- Inputs Tab -->
+            <div id="inputs-tab" class="tab-content">
+                <h3>Input Settings</h3>
+                <div class="config-section" id="inputs-container"></div>
+            </div>
+
+            <!-- Multi Dropdowns Tab -->
+            <div id="multidropdowns-tab" class="tab-content">
+                <h3>Multi Dropdown Settings</h3>
+                <div class="config-section" id="multidropdowns-container"></div>
+            </div>
+
+            <!-- Presets Tab -->
+            <div id="presets-tab" class="tab-content">
+                <h3>Quick Presets</h3>
+                <div class="config-section">
+                    <div class="section">
+                        <button class="preset-btn" onclick="loadPreset('farming')">🌾 Farming Mode</button>
+                        <button class="preset-btn" onclick="loadPreset('grinding')">⚔️ Grinding Mode</button>
+                        <button class="preset-btn" onclick="loadPreset('event')">🎉 Event Mode</button>
+                        <button class="preset-btn" onclick="loadPreset('potato')">🥔 Potato Mode (Max FPS)</button>
+                        <button class="preset-btn" onclick="exportConfig()">📤 Export Config</button>
+                        <button class="preset-btn" onclick="importConfigPrompt()">📥 Import Config</button>
+                    </div>
+                    <div class="section">
+                        <textarea id="importText" placeholder="Paste JSON config here..."></textarea>
+                        <button onclick="importConfig()">Import JSON</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGg_qtI28dHeh2PoCywlESib1CUO9BHCE",
+            authDomain: "panel-acl.firebaseapp.com",
+            databaseURL: "https://panel-acl-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "panel-acl",
+            storageBucket: "panel-acl.firebasestorage.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Default Lynx Config
+        let lynxConfig = {
+            "Toggles": {
+                "Disable_3D_Rendering": true,
+                "Auto_Favorite": false,
+                "Stable_Result_Good/Perfection": true,
+                "Enable_FPS_Unlock": true,
+                "Auto_Favorite_Ruby_Gemstone": true,
+                "FPS_Booster_(Potato_Mode)": true,
+                "Enable_Auto_Weather": true,
+                "Disable_Obtained_Fish_Notification": true,
+                "Enable_Auto_Sell": true
+            },
+            "Dropdowns": {
+                "Stone_Type": "Normal",
+                "Select_Skin": "Eclipse Katana",
+                "Auto_Sell_Mode": "By Count",
+                "Select_Island": "Treasure Room",
+                "Select_Rarity": "Common",
+                "Totem_Type": "Luck Totem",
+                "Charm_Type": "Bone Charm",
+                "FPS_Cap": "60"
+            },
+            "Inputs": {
+                "Value_(Seconds_/_Fish_Count)": 500,
+                "Instant_Delay": 0.8
+            },
+            "MultiDropdowns": {
+                "Rarity_Filter_(kosong_=_semua)": [],
+                "Name": ["Ruby"],
+                "Variant": ["Gemstone"],
+                "Weather_(multi)": ["Cloudy", "Storm", "Wind", "Radiant", "Shark Hunt"],
+                "Rarity": ["Legendary"],
+                "Select_Potions": []
+            }
+        };
+
+        // Options for dropdowns
+        const dropdownOptions = {
+            "Stone_Type": ["Normal", "Marble", "Granite", "Obsidian"],
+            "Select_Skin": ["Eclipse Katana", "Dragon Slayer", "Ice Phoenix", "Shadow Reaper"],
+            "Auto_Sell_Mode": ["By Count", "By Time", "By Value"],
+            "Select_Island": ["Treasure Room", "Ancient Isle", "Crystal Cove", "Storm Island"],
+            "Select_Rarity": ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical"],
+            "Totem_Type": ["Luck Totem", "Fishing Totem", "Treasure Totem"],
+            "Charm_Type": ["Bone Charm", "Crystal Charm", "Ancient Charm"],
+            "FPS_Cap": ["30", "60", "120", "144", "240", "Unlimited"]
+        };
+
+        const multiOptions = {
+            "Weather_(multi)": ["Clear", "Cloudy", "Rain", "Storm", "Wind", "Radiant", "Shark Hunt", "Fog"],
+            "Rarity": ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical"],
+            "Name": ["Ruby", "Sapphire", "Emerald", "Diamond", "Amethyst", "Topaz"],
+            "Variant": ["Gemstone", "Fish", "Treasure", "Artifact"],
+            "Select_Potions": ["Luck Potion", "Speed Potion", "Strength Potion", "Invisibility Potion"]
+        };
+
+        // Load data from Firebase
+        function loadConfig() {
+            db.ref('server1/lynx_config').once('value').then((snapshot) => {
+                const savedConfig = snapshot.val();
+                if(savedConfig) {
+                    lynxConfig = savedConfig;
+                    renderAll();
+                }
+            });
+            
+            db.ref('server1').once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    if(data.link_ps) document.getElementById("linkPs").value = data.link_ps;
+                    if(data.webhook_url) document.getElementById("webhookUrl").value = data.webhook_url;
+                }
+            });
+        }
+
+        // Save config to Firebase
+        function saveConfig() {
+            collectFormData();
+            
+            db.ref('server1/lynx_config').set(lynxConfig);
+            
+            const link = document.getElementById("linkPs").value;
+            const webhook = document.getElementById("webhookUrl").value;
+            
+            db.ref('server1').update({
+                link_ps: link,
+                webhook_url: webhook
+            });
+            
+            alert('Config saved!');
+        }
+
+        // Collect data from form
+        function collectFormData() {
+            // Collect toggles
+            document.querySelectorAll('[data-toggle]').forEach(checkbox => {
+                const key = checkbox.dataset.toggle;
+                lynxConfig.Toggles[key] = checkbox.checked;
+            });
+
+            // Collect dropdowns
+            document.querySelectorAll('[data-dropdown]').forEach(select => {
+                const key = select.dataset.dropdown;
+                lynxConfig.Dropdowns[key] = select.value;
+            });
+
+            // Collect inputs
+            document.querySelectorAll('[data-input]').forEach(input => {
+                const key = input.dataset.input;
+                lynxConfig.Inputs[key] = key.includes('Delay') ? parseFloat(input.value) : parseInt(input.value);
+            });
+
+            // Collect multidropdowns from array containers
+            for (let key in lynxConfig.MultiDropdowns) {
+                const container = document.getElementById(`array-${key}`);
+                if (container) {
+                    const items = container.querySelectorAll('.array-tag span');
+                    lynxConfig.MultiDropdowns[key] = Array.from(items).map(span => span.textContent);
+                }
+            }
+        }
+
+        // Render all sections
+        function renderAll() {
+            renderToggles();
+            renderDropdowns();
+            renderInputs();
+            renderMultiDropdowns();
+        }
+
+        // Render Toggles
+        function renderToggles() {
+            const container = document.getElementById('toggles-container');
+            container.innerHTML = '';
+            
+            for (let [key, value] of Object.entries(lynxConfig.Toggles)) {
+                const div = document.createElement('div');
+                div.className = 'checkbox-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="toggle-${key}" data-toggle="${key}" ${value ? 'checked' : ''}>
+                    <label for="toggle-${key}">${key.replace(/_/g, ' ')}</label>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        // Render Dropdowns
+        function renderDropdowns() {
+            const container = document.getElementById('dropdowns-container');
+            container.innerHTML = '';
+            
+            for (let [key, value] of Object.entries(lynxConfig.Dropdowns)) {
+                const div = document.createElement('div');
+                div.className = 'section';
+                
+                let options = dropdownOptions[key] || [value];
+                let optionsHtml = options.map(opt => 
+                    `<option value="${opt}" ${opt === value ? 'selected' : ''}>${opt}</option>`
+                ).join('');
+                
+                div.innerHTML = `
+                    <label>${key.replace(/_/g, ' ')}:</label>
+                    <select data-dropdown="${key}">
+                        ${optionsHtml}
+                    </select>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        // Render Inputs
+        function renderInputs() {
+            const container = document.getElementById('inputs-container');
+            container.innerHTML = '';
+            
+            for (let [key, value] of Object.entries(lynxConfig.Inputs)) {
+                const div = document.createElement('div');
+                div.className = 'section';
+                div.innerHTML = `
+                    <label>${key.replace(/_/g, ' ')}:</label>
+                    <input type="number" step="${key.includes('Delay') ? '0.1' : '1'}" 
+                           data-input="${key}" value="${value}">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        // Render MultiDropdowns
+        function renderMultiDropdowns() {
+            const container = document.getElementById('multidropdowns-container');
+            container.innerHTML = '';
+            
+            for (let [key, values] of Object.entries(lynxConfig.MultiDropdowns)) {
+                const div = document.createElement('div');
+                div.className = 'section';
+                
+                const availableOptions = multiOptions[key] || [];
+                
+                div.innerHTML = `
+                    <label>${key.replace(/_/g, ' ')}:</label>
+                    <div class="array-input">
+                        <select id="select-${key}">
+                            <option value="">Pilih item...</option>
+                            ${availableOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                        </select>
+                        <button onclick="addToArray('${key}')">+</button>
+                    </div>
+                    <div class="array-items" id="array-${key}">
+                        ${values.map(v => `
+                            <div class="array-tag">
+                                <span>${v}</span>
+                                <button onclick="removeFromArray('${key}', '${v}')">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        // Array manipulation functions
+        function addToArray(key) {
+            const select = document.getElementById(`select-${key}`);
+            const value = select.value;
+            if (!value) return;
+            
+            const container = document.getElementById(`array-${key}`);
+            const existing = Array.from(container.querySelectorAll('.array-tag span')).map(s => s.textContent);
+            
+            if (!existing.includes(value)) {
+                const tag = document.createElement('div');
+                tag.className = 'array-tag';
+                tag.innerHTML = `
+                    <span>${value}</span>
+                    <button onclick="removeFromArray('${key}', '${value}')">×</button>
+                `;
+                container.appendChild(tag);
+            }
+            select.value = '';
+        }
+
+        function removeFromArray(key, value) {
+            const container = document.getElementById(`array-${key}`);
+            const tags = container.querySelectorAll('.array-tag');
+            tags.forEach(tag => {
+                if (tag.querySelector('span').textContent === value) {
+                    tag.remove();
+                }
+            });
+        }
+
+        // Presets
+        function loadPreset(type) {
+            if (type === 'farming') {
+                lynxConfig.Toggles["Enable_Auto_Sell"] = true;
+                lynxConfig.Toggles["Auto_Favorite_Ruby_Gemstone"] = true;
+                lynxConfig.Dropdowns["Auto_Sell_Mode"] = "By Count";
+                lynxConfig.Inputs["Value_(Seconds_/_Fish_Count)"] = 500;
+            } else if (type === 'grinding') {
+                lynxConfig.Toggles["Enable_FPS_Unlock"] = true;
+                lynxConfig.Toggles["FPS_Booster_(Potato_Mode)"] = false;
+                lynxConfig.Dropdowns["FPS_Cap"] = "120";
+            } else if (type === 'event') {
+                lynxConfig.Toggles["Enable_Auto_Weather"] = true;
+                lynxConfig.MultiDropdowns["Weather_(multi)"] = ["Radiant", "Shark Hunt"];
+            } else if (type === 'potato') {
+                lynxConfig.Toggles["Disable_3D_Rendering"] = true;
+                lynxConfig.Toggles["FPS_Booster_(Potato_Mode)"] = true;
+                lynxConfig.Dropdowns["FPS_Cap"] = "240";
+            }
+            renderAll();
+        }
+
+        // Export/Import
+        function exportConfig() {
+            collectFormData();
+            const jsonStr = JSON.stringify(lynxConfig, null, 2);
+            document.getElementById('importText').value = jsonStr;
+        }
+
+        function importConfigPrompt() {
+            const jsonStr = prompt('Paste JSON config:');
+            if (jsonStr) {
+                try {
+                    lynxConfig = JSON.parse(jsonStr);
+                    renderAll();
+                } catch(e) {
+                    alert('Invalid JSON!');
+                }
+            }
+        }
+
+        function importConfig() {
+            try {
+                const jsonStr = document.getElementById('importText').value;
+                lynxConfig = JSON.parse(jsonStr);
+                renderAll();
+            } catch(e) {
+                alert('Invalid JSON!');
+            }
+        }
+
+        // Send command
+        function sendCommand(cmd) {
+            const link = document.getElementById("linkPs").value;
+            const webhook = document.getElementById("webhookUrl").value;
+            
+            if (cmd === 'START' && (link === '' || webhook === '')) {
+                alert("Isi Webhook Discord dan Link PS dulu bos!");
+                return;
+            }
+
+            collectFormData();
+            
+            db.ref('server1').set({
+                command: cmd,
+                link_ps: link,
+                webhook_url: webhook,
+                lynx_config: lynxConfig,
+                timestamp: Date.now()
+            });
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        // Monitor status
+        db.ref('server1/command').on('value', (snapshot) => {
+            const currentCmd = snapshot.val();
+            if(currentCmd) {
+                document.getElementById("statusTxt").innerText = currentCmd;
+                document.getElementById("statusTxt").style.color = currentCmd === 'START' ? '#00cc00' : '#cc0000';
+            }
+        });
+
+        // Initial load
+        loadConfig();
+    </script>
+</body>
+</html>
