@@ -10,31 +10,69 @@ C='\033[1;36m'  # Cyan
 W='\033[1;37m'  # Putih
 NC='\033[0m'    # Reset Warna
 
-clear
-echo -e "${C}==========================================${NC}"
-echo -e "${G}       ROBLOX MANAGER BY ACL (CLEAN)      ${NC}"
-echo -e "${C}==========================================${NC}"
-echo -e ""
+# ==========================================
+#               REM DARURAT (TRAP)
+# ==========================================
+cleanup() {
+    clear
+    echo -e "${R}╔══════════════════════════════════════════╗${NC}"
+    echo -e "${R}║         [!] REM DARURAT AKTIF [!]        ║${NC}"
+    echo -e "${R}╠══════════════════════════════════════════╣${NC}"
+    echo -e "${R}║${W} Menghentikan semua proses ACL Manager... ${R}║${NC}"
+    echo -e "${R}╚══════════════════════════════════════════╝${NC}"
+    echo -e ""
+    
+    if [ -n "$WEBHOOK_URL" ]; then
+        su -c "curl -s -H \"Content-Type: application/json\" -X POST -d \"{\\\"content\\\": \\\"🛑 **[ACL Manager]** Skrip dihentikan paksa oleh pengguna (Rem Darurat)!\\\"}\" \"$WEBHOOK_URL\"" > /dev/null 2>&1
+    fi
+    exit 0
+}
 
-# 1. Meminta input Link Private Server
-read -p "$(echo -e ${Y}"[?] Tempelkan Link Private Server: "${NC})" LINK
+trap cleanup INT TERM HUP
 
-# 2. Meminta input Link Webhook Discord (Bisa dikosongkan)
-read -p "$(echo -e ${Y}"[?] Tempelkan Link Webhook Discord (Tekan Enter jika tidak pakai): "${NC})" WEBHOOK_URL
-echo -e ""
+# ==========================================
+#               FUNGSI UI PANEL
+# ==========================================
+draw_header() {
+    clear
+    echo -e "${C}╔══════════════════════════════════════════╗${NC}"
+    echo -e "${C}║${G}       ROBLOX MANAGER BY ACL (CLEAN)      ${C}║${NC}"
+    echo -e "${C}╚══════════════════════════════════════════╝${NC}"
+}
 
-# Mencari package dengan nama com.roblox.acl
-APPS=$(pm list packages | grep "com.roblox.acl" | cut -d ":" -f2)
+countdown() {
+    local seconds=$1
+    local msg=$2
+    while [ $seconds -gt 0 ]; do
+        draw_header
+        echo -e "${Y} ▶ STATUS  : ${W}$msg${NC}"
+        echo -e "${Y} ▶ MENUNGGU: ${C}$seconds detik...${NC}"
+        echo -e "${C}──────────────────────────────────────────${NC}"
+        echo -e "${R}   [!] Tekan CTRL+C untuk Berhenti [!]    ${NC}"
+        sleep 1
+        seconds=$((seconds - 1))
+    done
+}
+
+# ==========================================
+#               SETUP AWAL
+# ==========================================
+draw_header
+read -p "$(echo -e ${Y}"[?] Tempelkan Link Private Server:\n> "${NC})" LINK
+echo -e "${C}──────────────────────────────────────────${NC}"
+read -p "$(echo -e ${Y}"[?] Tempelkan Link Webhook Discord (Kosongkan jika tidak pakai):\n> "${NC})" WEBHOOK_URL
+
+APPS=$(pm list packages | grep "com.roblox.nomercy" | cut -d ":" -f2)
 TIMER=$(date +%s)
 
 if [ -z "$APPS" ]; then
-    echo -e "${R}[!] Tidak ada aplikasi com.roblox.acl yang ditemukan. Pemasangan dibatalkan.${NC}"
+    draw_header
+    echo -e "${R}[!] Tidak ada aplikasi com.roblox.acl yang ditemukan!${NC}\n"
     exit
 fi
 
 TOTAL_APPS=$(echo "$APPS" | wc -w)
 
-# Fungsi untuk mengirim pesan ke Discord via Webhook
 send_webhook() {
     local MSG=$1
     if [ -n "$WEBHOOK_URL" ]; then
@@ -43,9 +81,8 @@ send_webhook() {
 }
 
 set_screen() {
-    echo -e "${C}[*] Mengatur resolusi layar (wm density 164)...${NC}"
+    countdown 2 "Mengatur resolusi layar (wm density 164)..."
     su -c "wm density 164"
-    sleep 1
     su -c "service call window 101 i32 20"
 }
 
@@ -53,85 +90,121 @@ run_setup() {
     set_screen
     send_webhook "🚀 **[ACL Manager]** Memulai eksekusi untuk $TOTAL_APPS akun..."
     
+    # -------------------------------------------------------------
+    # TITIK AWAL JENDELA MUNCUL (Titik Cubit)
+    # Jika saat dicoba jendelanya tidak mau tergeser, ubah angka ini 
+    # agar pas mengenai bagian atas (title bar) jendela Roblox yang baru muncul.
+    # -------------------------------------------------------------
+    SPAWN_X=450  # Posisi Kiri-Kanan (Biasanya di tengah layar)
+    SPAWN_Y=150  # Posisi Atas-Bawah (Biasanya di atas)
+    
     IDX=0
     for PKG in $APPS; do
-        T_Y=$(echo "250 610 950" | cut -d " " -f$(( (IDX % 3) + 1 )))
-        echo -e "${Y}[>] Membuka $PKG...${NC}"
+        # PENGATURAN POSISI ATAS, TENGAH, BAWAH
+        case $IDX in
+            0) POS="Kiri Atas";    T_X=100; T_Y=150 ;; # Akun 1
+            1) POS="Kanan Atas";   T_X=600; T_Y=150 ;; # Akun 2
+            2) POS="Kiri Tengah";  T_X=100; T_Y=550 ;; # Akun 3
+            3) POS="Kanan Tengah"; T_X=600; T_Y=550 ;; # Akun 4
+            4) POS="Kiri Bawah";   T_X=100; T_Y=950 ;; # Akun 5
+            5) POS="Kanan Bawah";  T_X=600; T_Y=950 ;; # Akun 6
+            *) POS="Luar Layar";   T_X=350; T_Y=550 ;; # Akun 7 dst
+        esac
+        
+        draw_header
+        echo -e "${Y} ▶ Membuka Akun $((IDX + 1)) / $TOTAL_APPS (${POS})${NC}"
+        echo -e "${W}   Target: $PKG${NC}"
         su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        sleep 8  # Jeda nunggu Roblox terbuka penuh
         
-        su -c "input keyevent 3"; sleep 1    # Jeda tombol Home
-        su -c "input keyevent 187"; sleep 2  # Jeda nunggu menu Recent Apps muncul
-        su -c "input tap 364 125"; sleep 1   # Jeda nunggu pop-up ikon muncul
-        su -c "input tap 357 343"; sleep 1.5 # Jeda nunggu Roblox jadi mode Freeform
+        countdown 8 "Menunggu $PKG terbuka penuh..."
         
-        su -c "input swipe 300 250 680 $T_Y 600"
-        sleep 1.5 # Jeda nunggu jendela selesai digeser
+        su -c "input keyevent 3"; sleep 1
+        su -c "input keyevent 187"; sleep 2
+        su -c "input tap 364 125"; sleep 1
+        su -c "input tap 357 343"; sleep 1.5
+        
+        draw_header
+        echo -e "${C} ▶ Menarik $PKG dari atas layar ke $POS...${NC}"
+        
+        # Eksekusi geser: Tarik dari titik SPAWN (Atas) menuju titik Target (T_X, T_Y)
+        su -c "input swipe $SPAWN_X $SPAWN_Y $T_X $T_Y 600"
+        sleep 1.5
+        
+        countdown 60 "Jeda antar akun agar tidak crash..."
         
         IDX=$((IDX + 1))
     done
     
-    echo -e "${C}[*] Mengembalikan fokus ke Termux...${NC}"
+    countdown 3 "Mengembalikan fokus ke Termux..."
     su -c "monkey -p com.termux -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-    sleep 2
     
     for PKG in $APPS; do
-        echo -e "${G}[>] Join Private Server: $PKG...${NC}"
+        draw_header
+        echo -e "${G} ▶ Proses Rejoin Private Server...${NC}"
+        echo -e "${W}   Target: $PKG${NC}"
+        
         su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
         sleep 2
         su -c "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" > /dev/null 2>&1
-        sleep 12
+        
+        countdown 12 "Menunggu akun masuk ke dalam server..."
     done
     send_webhook "✅ **[ACL Manager]** Semua akun berhasil diarahkan ke Private Server!"
 }
 
+# Menjalankan fungsi setup
 run_setup
 
-echo -e "\n${G}[*] Sistem Monitoring Aktif. Tekan CTRL+C di Termux untuk berhenti.${NC}\n"
-
+# ==========================================
+#             SISTEM MONITORING
+# ==========================================
 while true; do
-    RESET=0
     NOW=$(date +%s)
     
-    # Hapus Cache tiap 5 menit (300 detik)
     if [ $((NOW - TIMER)) -ge 300 ]; then
-        echo -e "${C}[*] $(date +%T) - Membersihkan cache aplikasi...${NC}"
+        draw_header
+        echo -e "${Y} ▶ MEMBERSIHKAN CACHE APLIKASI...${NC}"
         for PKG in $APPS; do
             su -c "rm -rf /data/data/$PKG/cache/*" > /dev/null 2>&1
         done
         TIMER=$NOW
+        sleep 2
     fi
 
-    # Cek apakah ada akun yang keluar/Force Close
     for PKG in $APPS; do
         CHECK=$(su -c "dumpsys activity activities | grep 'mResumedActivity' | grep $PKG")
         if [ -z "$CHECK" ]; then
-            echo -e "${R}[!] Terdeteksi Force Close pada: $PKG${NC}"
-            RESET=1
-            break
+            send_webhook "⚠️ **[ACL Manager]** Terdeteksi Force Close pada $PKG! Melakukan pemulihan..."
+            
+            draw_header
+            echo -e "${R} ⚠️ TERDETEKSI FORCE CLOSE PADA:${NC}"
+            echo -e "${W}    $PKG${NC}"
+            
+            su -c "am force-stop $PKG"
+            countdown 5 "Menutup paksa sisa data $PKG..."
+            
+            draw_header
+            echo -e "${Y} ▶ Membuka ulang $PKG...${NC}"
+            su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
+            countdown 10 "Menunggu aplikasi siap..."
+            
+            draw_header
+            echo -e "${G} ▶ Rejoin Private Server untuk: $PKG...${NC}"
+            su -c "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" > /dev/null 2>&1
+            countdown 12 "Menunggu proses join selesai..."
+            
+            su -c "monkey -p com.termux -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
         fi
     done
 
-    # Jika ada aplikasi tertutup, lakukan pemulihan
-    if [ $RESET -eq 1 ]; then
-        send_webhook "⚠️ **[ACL Manager]** Terdeteksi Force Close! Melakukan pembersihan RAM dan Auto-Restart..."
-        echo -e "${R}[!] Memulai proses pemulihan dalam 10 detik...${NC}"
-        sleep 10
-        for PKG in $APPS; do su -c "am force-stop $PKG"; done
-        sleep 2
-        su -c "input keyevent 3"; sleep 1
-        su -c "input keyevent 187"; sleep 2
-        echo -e "${Y}[*] Menutup aplikasi di background (Recent Apps)...${NC}"
-        for i in 1 2 3 4 5 6 7; do
-            su -c "input swipe 540 1000 540 100 250"
-            sleep 0.8
-        done
-        su -c "input keyevent 3"; sleep 1
-        run_setup
-        TIMER=$(date +%s)
-        continue 
-    fi
-
-    echo -e "${W}[$(date +%T)] Memantau kestabilan $TOTAL_APPS akun...${NC}"
-    sleep 15
+    for i in $(seq 15 -1 1); do
+        draw_header
+        echo -e "${W} ▶ Total Akun : ${Y}$TOTAL_APPS${NC}"
+        echo -e "${W} ▶ Status     : ${G}Monitoring Aktif...${NC}"
+        echo -e "${W} ▶ Jam Sistem : ${Y}$(date +%T)${NC}"
+        echo -e "${W} ▶ Cek Ulang  : ${C}$i detik lagi${NC}"
+        echo -e "${C}──────────────────────────────────────────${NC}"
+        echo -e "${R}   [!] Tekan CTRL+C untuk Berhenti [!]    ${NC}"
+        sleep 1
+    done
 done
