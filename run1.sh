@@ -1,190 +1,137 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/system/bin/sh
 
 # ==========================================
-#   ROBLOX ACL MANAGER - FULL C2
-#   BY Acl XCODE (Full Control)
+#             WARNA UNTUK UI TERMUX
 # ==========================================
+R='\033[1;31m'  # Merah
+G='\033[1;32m'  # Hijau
+Y='\033[1;33m'  # Kuning
+C='\033[1;36m'  # Cyan
+W='\033[1;37m'  # Putih
+NC='\033[0m'    # Reset Warna
 
-FIREBASE_URL="https://panel-acl-default-rtdb.asia-southeast1.firebasedatabase.app/server1.json"
-SCRIPT_BASE="loadstring(game:HttpGet('https://raw.githubusercontent.com/4LynxX/Lynx/refs/heads/main/LynxxMain.lua'))()"
-APPS=($(pm list packages | grep "com.roblox" | cut -d ":" -f2))
+clear
+echo -e "${C}==========================================${NC}"
+echo -e "${G}       ROBLOX MANAGER BY ACL (CLEAN)      ${NC}"
+echo -e "${C}==========================================${NC}"
+echo -e ""
 
-# Variabel Global
-WEBHOOK_URL=""
-LINK_PS=""
-LYNX_CONFIG=""
+# 1. Meminta input Link Private Server
+read -p "$(echo -e ${Y}"[?] Tempelkan Link Private Server: "${NC})" LINK
 
-# --- FUNGSI-FUNGSI ---
-send_discord() {
+# 2. Meminta input Link Webhook Discord (Bisa dikosongkan)
+read -p "$(echo -e ${Y}"[?] Tempelkan Link Webhook Discord (Tekan Enter jika tidak pakai): "${NC})" WEBHOOK_URL
+echo -e ""
+
+# Mencari package dengan nama com.roblox.acl
+APPS=$(pm list packages | grep "com.roblox.acl" | cut -d ":" -f2)
+TIMER=$(date +%s)
+
+if [ -z "$APPS" ]; then
+    echo -e "${R}[!] Tidak ada aplikasi com.roblox.acl yang ditemukan. Pemasangan dibatalkan.${NC}"
+    exit
+fi
+
+TOTAL_APPS=$(echo "$APPS" | wc -w)
+
+# Fungsi untuk mengirim pesan ke Discord via Webhook
+send_webhook() {
+    local MSG=$1
     if [ -n "$WEBHOOK_URL" ]; then
-        curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"$1\"}" "$WEBHOOK_URL" &> /dev/null &
+        su -c "curl -s -H \"Content-Type: application/json\" -X POST -d \"{\\\"content\\\": \\\"$MSG\\\"}\" \"$WEBHOOK_URL\"" > /dev/null 2>&1
     fi
 }
 
-kill_all() {
-    for KILL in "${APPS[@]}"; do su -c "am force-stop $KILL"; done
-}
-
-# Fungsi untuk membuat script Lynx dengan konfigurasi
-generate_lynx_script() {
-    local config_json="$1"
-    
-    # Escape JSON untuk dimasukkan ke dalam script
-    local escaped_json=$(echo "$config_json" | sed 's/"/\\"/g')
-    
-    # Generate script dengan konfigurasi
-    cat << EOF
--- Lynx Auto Loader dengan Config
-local config = $config_json
-
--- Load Lynx dengan config
-loadstring(game:HttpGet('https://raw.githubusercontent.com/4LynxX/Lynx/refs/heads/main/LynxxMain.lua'))()
-
--- Terapkan config setelah Lynx terload
-wait(2)
-if Lynx and Lynx.ApplyConfig then
-    Lynx.ApplyConfig(config)
-else
-    warn("Gagal menerapkan config")
-end
-EOF
-}
-
-inject_autoexec() {
-    local script_content="$1"
-    
-    for PKG in "${APPS[@]}"; do
-        su -c "mkdir -p /data/data/$PKG/files/auth/scripts/autoexec"
-        echo "$script_content" | su -c "cat > /data/data/$PKG/files/auth/scripts/autoexec/main.lua"
-        su -c "chmod 777 /data/data/$PKG/files/auth/scripts/autoexec/main.lua"
-    done
-}
-
-rebuild_layout() {
-    local link="$1"
-    local lynx_script="$2"
-    
+set_screen() {
+    echo -e "${C}[*] Mengatur resolusi layar (wm density 164)...${NC}"
     su -c "wm density 164"
+    sleep 1
     su -c "service call window 101 i32 20"
+}
+
+run_setup() {
+    set_screen
+    send_webhook "🚀 **[ACL Manager]** Memulai eksekusi untuk $TOTAL_APPS akun..."
     
-    # Inject script dengan config
-    inject_autoexec "$lynx_script"
-    
-    SCREEN_W=720; SCREEN_H=1280
-    TOTAL_APPS=${#APPS[@]}
-    WINDOW_H=$((SCREEN_H / TOTAL_APPS))
-    
-    for i in "${!APPS[@]}"; do
-        PKG=${APPS[$i]}
+    IDX=0
+    for PKG in $APPS; do
+        T_Y=$(echo "250 610 950" | cut -d " " -f$(( (IDX % 3) + 1 )))
+        echo -e "${Y}[>] Membuka $PKG...${NC}"
         su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        sleep 5 
-        su -c "input keyevent KEYCODE_HOME"; sleep 0.5
-        su -c "input keyevent KEYCODE_APP_SWITCH"; sleep 1.5
-        su -c "input tap 364 125"; sleep 0.8
-        su -c "input tap 357 343"; sleep 1.5
+        sleep 8  # Jeda nunggu Roblox terbuka penuh
         
-        TASK_ID=$(su -c "dumpsys activity activities | grep -B 2 'realActivity.*$PKG' | grep 'taskId=' | grep -oP '(?<=taskId=)[0-9]+' | tail -n 1")
+        su -c "input keyevent 3"; sleep 1    # Jeda tombol Home
+        su -c "input keyevent 187"; sleep 2  # Jeda nunggu menu Recent Apps muncul
+        su -c "input tap 364 125"; sleep 1   # Jeda nunggu pop-up ikon muncul
+        su -c "input tap 357 343"; sleep 1.5 # Jeda nunggu Roblox jadi mode Freeform
         
-        POS_TOP=$((i * WINDOW_H))
-        POS_BOTTOM=$(((i + 1) * WINDOW_H))
+        su -c "input swipe 300 250 680 $T_Y 600"
+        sleep 1.5 # Jeda nunggu jendela selesai digeser
         
-        if [ -n "$TASK_ID" ]; then
-            su -c "am task resize $TASK_ID 0 $POS_TOP $SCREEN_W $POS_BOTTOM"
-        fi
-        sleep 1
+        IDX=$((IDX + 1))
     done
     
+    echo -e "${C}[*] Mengembalikan fokus ke Termux...${NC}"
     su -c "monkey -p com.termux -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
     sleep 2
     
-    for PKG in "${APPS[@]}"; do
-        su -c "am start -a android.intent.action.VIEW -d '$link' -p $PKG" > /dev/null 2>&1
-        sleep 12 
+    for PKG in $APPS; do
+        echo -e "${G}[>] Join Private Server: $PKG...${NC}"
+        su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
+        sleep 2
+        su -c "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" > /dev/null 2>&1
+        sleep 12
     done
+    send_webhook "✅ **[ACL Manager]** Semua akun berhasil diarahkan ke Private Server!"
 }
 
-# Parse JSON menggunakan grep/sed sederhana
-parse_json() {
-    local json="$1"
-    local key="$2"
-    
-    # Coba ambil nilai dengan berbagai format
-    local value=$(echo "$json" | grep -oP "\"$key\"\s*:\s*\"\K[^\"]+" | head -1)
-    
-    if [ -z "$value" ]; then
-        # Coba untuk boolean/number tanpa quote
-        value=$(echo "$json" | grep -oP "\"$key\"\s*:\s*\K[^,}]+" | head -1 | tr -d ' ')
-    fi
-    
-    echo "$value"
-}
+run_setup
 
-# --- MAIN LOOP (C2 POLLING) ---
-echo "Menghubungkan ke Web Panel ACL XCODE..."
-LAST_STATE="STOP"
+echo -e "\n${G}[*] Sistem Monitoring Aktif. Tekan CTRL+C di Termux untuk berhenti.${NC}\n"
 
 while true; do
-    # Ambil data JSON dari Firebase
-    DATA=$(curl -s "$FIREBASE_URL")
+    RESET=0
+    NOW=$(date +%s)
     
-    # Ekstrak data dasar
-    COMMAND=$(parse_json "$DATA" "command")
-    LINK_PS=$(parse_json "$DATA" "link_ps")
-    WEBHOOK_URL=$(parse_json "$DATA" "webhook_url")
-    
-    # Ekstrak Lynx config (ambil seluruh object)
-    LYNX_CONFIG=$(echo "$DATA" | grep -oP '"lynx_config":\{[^}]*\}')
-    
-    # Jika ada command START
-    if [ "$COMMAND" == "START" ] && [ "$LAST_STATE" == "STOP" ]; then
-        echo "[+] Web Command: START"
-        LAST_STATE="START"
-        
-        send_discord "🟢 **ACL XCODE START**: Membuka ${#APPS[@]} akun dengan konfigurasi..."
-        
-        # Generate script dengan config
-        if [ -n "$LYNX_CONFIG" ]; then
-            LYNX_SCRIPT=$(generate_lynx_script "{${LYNX_CONFIG#*\{}")
-        else
-            # Default config jika tidak ada
-            LYNX_SCRIPT="$SCRIPT_BASE"
-        fi
-        
-        rebuild_layout "$LINK_PS" "$LYNX_SCRIPT"
-        send_discord "✅ **ACL XCODE RUNNING**: ${#APPS[@]} akun aktif dengan config"
-        
-    # Jika website menekan STOP
-    elif [ "$COMMAND" == "STOP" ] && [ "$LAST_STATE" == "START" ]; then
-        echo "[-] Web Command: STOP"
-        LAST_STATE="STOP"
-        send_discord "🔴 **ACL XCODE STOP**: Mematikan semua akun..."
-        kill_all
-    fi
-
-    # Monitoring Crash
-    if [ "$LAST_STATE" == "START" ]; then
-        STUCK=false
-        for PKG in "${APPS[@]}"; do
-            CHECK=$(su -c "dumpsys window windows | grep -E 'mCurrentFocus' | grep $PKG")
-            if [ -z "$CHECK" ]; then STUCK=true; break; fi
+    # Hapus Cache tiap 5 menit (300 detik)
+    if [ $((NOW - TIMER)) -ge 300 ]; then
+        echo -e "${C}[*] $(date +%T) - Membersihkan cache aplikasi...${NC}"
+        for PKG in $APPS; do
+            su -c "rm -rf /data/data/$PKG/cache/*" > /dev/null 2>&1
         done
-
-        if [ "$STUCK" = true ]; then
-            echo "[!] Crash terdeteksi. Restarting..."
-            send_discord "⚠️ **ACL XCODE ALERT**: Terdeteksi DC/Crash! Melakukan restart..."
-            kill_all
-            sleep 2
-            
-            # Regenerate script untuk restart
-            if [ -n "$LYNX_CONFIG" ]; then
-                LYNX_SCRIPT=$(generate_lynx_script "{${LYNX_CONFIG#*\{}")
-            else
-                LYNX_SCRIPT="$SCRIPT_BASE"
-            fi
-            
-            rebuild_layout "$LINK_PS" "$LYNX_SCRIPT"
-        fi
+        TIMER=$NOW
     fi
 
-    sleep 5
+    # Cek apakah ada akun yang keluar/Force Close
+    for PKG in $APPS; do
+        CHECK=$(su -c "dumpsys activity activities | grep 'mResumedActivity' | grep $PKG")
+        if [ -z "$CHECK" ]; then
+            echo -e "${R}[!] Terdeteksi Force Close pada: $PKG${NC}"
+            RESET=1
+            break
+        fi
+    done
+
+    # Jika ada aplikasi tertutup, lakukan pemulihan
+    if [ $RESET -eq 1 ]; then
+        send_webhook "⚠️ **[ACL Manager]** Terdeteksi Force Close! Melakukan pembersihan RAM dan Auto-Restart..."
+        echo -e "${R}[!] Memulai proses pemulihan dalam 10 detik...${NC}"
+        sleep 10
+        for PKG in $APPS; do su -c "am force-stop $PKG"; done
+        sleep 2
+        su -c "input keyevent 3"; sleep 1
+        su -c "input keyevent 187"; sleep 2
+        echo -e "${Y}[*] Menutup aplikasi di background (Recent Apps)...${NC}"
+        for i in 1 2 3 4 5 6 7; do
+            su -c "input swipe 540 1000 540 100 250"
+            sleep 0.8
+        done
+        su -c "input keyevent 3"; sleep 1
+        run_setup
+        TIMER=$(date +%s)
+        continue 
+    fi
+
+    echo -e "${W}[$(date +%T)] Memantau kestabilan $TOTAL_APPS akun...${NC}"
+    sleep 15
 done
