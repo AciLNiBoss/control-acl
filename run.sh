@@ -24,7 +24,7 @@ read -p "$(echo -e ${Y}"[?] Tempelkan Link Webhook Discord (Tekan Enter jika tid
 echo -e ""
 
 # Mencari package dengan nama com.roblox.acl
-APPS=$(pm list packages | grep "com.roblox.acl" | cut -d ":" -f2)
+APPS=$(pm list packages | grep "com.roblox.nomercy" | cut -d ":" -f2)
 TIMER=$(date +%s)
 
 if [ -z "$APPS" ]; then
