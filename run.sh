@@ -1,137 +1,182 @@
-#!/system/bin/sh
+#!/bin/bash
+# ACL XCODE - Multi-Account Manager (All-in-One Version)
 
-# ==========================================
-#             WARNA UNTUK UI TERMUX
-# ==========================================
-R='\033[1;31m'  # Merah
-G='\033[1;32m'  # Hijau
-Y='\033[1;33m'  # Kuning
-C='\033[1;36m'  # Cyan
-W='\033[1;37m'  # Putih
-NC='\033[0m'    # Reset Warna
+# 1. Auto Kill proses pas exit (termasuk mematikan Roblox)
+trap "pkill -f com.roblox.client; exit" SIGINT SIGTERM
+
+CONFIG_FILE="$HOME/.acl_config"
+
+# Warna
+GREY='\033[90m'
+BOLD='\033[1m'
+GREEN='\033[92m'
+BLUE='\033[94m'
+CYAN='\033[96m'
+NC='\033[0m'
 
 clear
-echo -e "${C}==========================================${NC}"
-echo -e "${G}       ROBLOX MANAGER BY ACL (CLEAN)      ${NC}"
-echo -e "${C}==========================================${NC}"
-echo -e ""
+# 2. ASCII Art ACL XCODE
+echo -e "${CYAN}${BOLD}"
+echo "   █████╗  ██████╗██╗     "
+echo "  ██╔══██╗██╔════╝██║     "
+echo "  ███████║██║     ██║     "
+echo "  ██╔══██║██║     ██║     "
+echo "  ██║  ██║╚██████╗███████╗"
+echo "  ╚═╝  ╚═╝ ╚═════╝╚══════╝"
+echo "  ██╗  ██╗ ██████╗ ██████╗ ██████╗ ███████╗"
+echo "  ╚██╗██╔╝██╔════╝██╔═══██╗██╔══██╗██╔════╝"
+echo "   ╚███╔╝ ██║     ██║   ██║██║  ██║█████╗  "
+echo "   ██╔██╗ ██║     ██║   ██║██║  ██║██╔══╝  "
+echo "  ██╔╝ ██╗╚██████╗╚██████╔╝██████╔╝███████╗"
+echo "  ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝"
+echo -e "${NC}"
+echo -e "${BOLD}         PRIVATE MANAGER START          ${NC}"
+echo -e "${GREY}------------------------------------------${NC}"
 
-# 1. Meminta input Link Private Server
-read -p "$(echo -e ${Y}"[?] Tempelkan Link Private Server: "${NC})" LINK
-
-# 2. Meminta input Link Webhook Discord (Bisa dikosongkan)
-read -p "$(echo -e ${Y}"[?] Tempelkan Link Webhook Discord (Tekan Enter jika tidak pakai): "${NC})" WEBHOOK_URL
-echo -e ""
-
-# Mencari package dengan nama com.roblox.acl
-APPS=$(pm list packages | grep "com.roblox.nomercy" | cut -d ":" -f2)
-TIMER=$(date +%s)
-
-if [ -z "$APPS" ]; then
-    echo -e "${R}[!] Tidak ada aplikasi com.roblox.acl yang ditemukan. Pemasangan dibatalkan.${NC}"
-    exit
+# 3. Sistem Load & Save Config (Tanpa Key)
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+    echo -e "${CYAN}[!] Data lama ditemukan.${NC}"
+    echo ""
+    echo -n "📁 Pakai data yang sebelumnya? (y/n): "
+    read REUSE
+    if [[ "$REUSE" != "y" ]]; then
+        rm "$CONFIG_FILE"
+    fi
 fi
 
-TOTAL_APPS=$(echo "$APPS" | wc -w)
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo -e "${BOLD}Masukan Link PS Mu:${NC}"
+    echo -n " > "
+    read PS
+    
+    echo -e "${BOLD}Masukan URL Webhook Discord (Opsional) :${NC}"
+    echo -n " > "
+    read WH
+    
+    echo "PS='$PS'" > "$CONFIG_FILE"
+    echo "WH='$WH'" >> "$CONFIG_FILE"
+fi
 
-# Fungsi untuk mengirim pesan ke Discord via Webhook
-send_webhook() {
-    local MSG=$1
-    if [ -n "$WEBHOOK_URL" ]; then
-        su -c "curl -s -H \"Content-Type: application/json\" -X POST -d \"{\\\"content\\\": \\\"$MSG\\\"}\" \"$WEBHOOK_URL\"" > /dev/null 2>&1
+echo ""
+echo -e "${GREEN}[V] Menjalankan ACL XCODE... (CTRL+C untuk berhenti)${NC}"
+sleep 2
+
+# ==========================================
+# 4. CORE ENGINE MULTI-ACCOUNT ACL XCODE
+# ==========================================
+
+LINK="$PS"
+WEBHOOK="$WH"
+
+# Opsional: Ganti link gambar ini dengan link logo ACL kamu sendiri
+LOGO_URL="https://raw.githubusercontent.com/Fizxyyyy/fizxy-toolss/main/launcher_icon.png"
+
+MSG_ID=""
+APPS=$(pm list packages | grep -i roblox | cut -d ":" -f2 | sort -u)
+TIMER=$(date +%s)
+HEAVY_TIMER=$(date +%s)
+LAST_CLEAN="Belum dilakukan"
+
+# Cek akses Root
+if [ "$(id -u)" = "0" ]; then RUN() { sh -c "$1"; }; else RUN() { su -c "$1"; }; fi
+
+get_cpu() {
+    CPU_USAGE=$(top -n 1 -b | grep "CPU:" | head -n 1 | awk '{print $2 + $4}')
+    [ -z "$CPU_USAGE" ] && CPU_USAGE="0"
+    CPU_INFO="${CPU_USAGE}%"
+}
+
+get_ram() {
+    MEM=$(free -m | grep "Mem:")
+    TOTAL=$(echo $MEM | awk '{print $2}')
+    FREE=$(echo $MEM | awk '{print $4}')
+    RAM_USE="${FREE}MB"
+    RAM_TOTAL="${TOTAL}MB"
+}
+
+get_status() {
+    STATUS_LIST=""
+    ONLINE=0; OFFLINE=0
+    for PKG in $APPS; do
+        PID=$(pidof $PKG)
+        if [ -z "$PID" ]; then STATE="🔴"; OFFLINE=$((OFFLINE+1)); else STATE="🟢"; ONLINE=$((ONLINE+1)); fi
+        STATUS_LIST="${STATUS_LIST}${PKG} : ${STATE}\n"
+    done
+    [ $OFFLINE -gt 0 ] && MAIN_STATUS="⚠️ STATUS: ADA YANG OFF JIRR 😩" || MAIN_STATUS="STATUS: SEMUA ROBLOX ON"
+}
+
+send_monitor() {
+    [ -z "$WEBHOOK" ] && return
+    get_cpu && get_ram && get_status
+    DATA='{"embeds": [{"title": "ACL XCODE MONITORING","description": "━━━━━━━━━━━━━━━━━━━━\n'"$MAIN_STATUS"'\n\nCPU USAGE: '"$CPU_INFO"'\n\nRAM: '"$RAM_USE"' / '"$RAM_TOTAL"'\n\nLAST CLEAN: '"$LAST_CLEAN"'\n\nROBLOX STATUS\n├ Online  : '"$ONLINE"'\n└ Offline : '"$OFFLINE"'\n\nDETAIL\n'"$STATUS_LIST"'━━━━━━━━━━━━━━━━━━━━","color": 3066993,"thumbnail": {"url": "'"$LOGO_URL"'"},"footer": {"text": "ACL XCODE • '$(date +%H:%M:%S)'","icon_url": "'"$LOGO_URL"'"}}]}'
+    if [ -z "$MSG_ID" ]; then
+        RESP=$(curl -s -H "Content-Type: application/json" -X POST -d "$DATA" "${WEBHOOK}?wait=true")
+        MSG_ID=$(echo "$RESP" | grep -o '"id": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
+    else
+        curl -s -o /dev/null -X PATCH -H "Content-Type: application/json" -d "$DATA" "${WEBHOOK}/messages/${MSG_ID}"
     fi
 }
 
-set_screen() {
-    echo -e "${C}[*] Mengatur resolusi layar (wm density 164)...${NC}"
-    su -c "wm density 164"
-    sleep 1
-    su -c "service call window 101 i32 20"
-}
+# Jalankan monitor Discord di latar belakang (Background Process)
+( while true; do send_monitor; sleep 5; done ) &
+MONITOR_PID=$!
+
+# Update trap untuk ikut mematikan proses monitor saat keluar
+trap "pkill -f com.roblox.client; kill $MONITOR_PID 2>/dev/null; exit" SIGINT SIGTERM
+
+set_screen() { RUN "wm density 164"; sleep 1; RUN "service call window 101 i32 20"; }
 
 run_setup() {
     set_screen
-    send_webhook "🚀 **[ACL Manager]** Memulai eksekusi untuk $TOTAL_APPS akun..."
-    
-    IDX=0
+    IDX=0; COUNT=$(echo "$APPS" | wc -w)
     for PKG in $APPS; do
-        T_Y=$(echo "250 610 950" | cut -d " " -f$(( (IDX % 3) + 1 )))
-        echo -e "${Y}[>] Membuka $PKG...${NC}"
-        su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        sleep 8  # Jeda nunggu Roblox terbuka penuh
-        
-        su -c "input keyevent 3"; sleep 1    # Jeda tombol Home
-        su -c "input keyevent 187"; sleep 2  # Jeda nunggu menu Recent Apps muncul
-        su -c "input tap 364 125"; sleep 1   # Jeda nunggu pop-up ikon muncul
-        su -c "input tap 357 343"; sleep 1.5 # Jeda nunggu Roblox jadi mode Freeform
-        
-        su -c "input swipe 300 250 680 $T_Y 600"
-        sleep 1.5 # Jeda nunggu jendela selesai digeser
-        
         IDX=$((IDX + 1))
+        RUN "monkey -p $PKG -c android.intent.category.LAUNCHER 1" >/dev/null 2>&1
+        sleep 6; RUN "input keyevent 3"; sleep 1; RUN "input keyevent 187"; sleep 2
+        RUN "input tap 364 125"; sleep 1; RUN "input tap 357 343"; sleep 2
+        RUN "input swipe 300 250 680 250 600"; sleep 1
+        TOP=$(( (IDX - 1) * (1200 / COUNT) )); BOT=$(( IDX * (1200 / COUNT) ))
+        RUN "input swipe 540 50 540 $TOP 300"; RUN "input swipe 540 275 540 $BOT 300"; sleep 0.5
     done
-    
-    echo -e "${C}[*] Mengembalikan fokus ke Termux...${NC}"
-    su -c "monkey -p com.termux -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-    sleep 2
-    
+    RUN "monkey -p com.termux -c android.intent.category.LAUNCHER 1" >/dev/null 2>&1; sleep 2
     for PKG in $APPS; do
-        echo -e "${G}[>] Join Private Server: $PKG...${NC}"
-        su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        sleep 2
-        su -c "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" > /dev/null 2>&1
-        sleep 12
+        RUN "monkey -p $PKG -c android.intent.category.LAUNCHER 1" >/dev/null 2>&1; sleep 2
+        RUN "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" >/dev/null 2>&1; sleep 12
     done
-    send_webhook "✅ **[ACL Manager]** Semua akun berhasil diarahkan ke Private Server!"
 }
 
+# Mulai Eksekusi
+if [ -z "$APPS" ]; then echo -e "${CYAN}[!] Tidak ada aplikasi Roblox yang terdeteksi.${NC}"; exit; fi
 run_setup
 
-echo -e "\n${G}[*] Sistem Monitoring Aktif. Tekan CTRL+C di Termux untuk berhenti.${NC}\n"
-
+# Main Watchdog Loop
 while true; do
-    RESET=0
-    NOW=$(date +%s)
+    RESET=0; NOW=$(date +%s)
     
-    # Hapus Cache tiap 5 menit (300 detik)
+    # Cache Cleaner
     if [ $((NOW - TIMER)) -ge 300 ]; then
-        echo -e "${C}[*] $(date +%T) - Membersihkan cache aplikasi...${NC}"
+        for PKG in $APPS; do RUN "rm -rf /data/data/$PKG/cache/*" >/dev/null 2>&1; done
+        LAST_CLEAN=$(date +%H:%M:%S); TIMER=$NOW
+    fi
+    
+    # Crash Checker
+    if [ $((NOW - HEAVY_TIMER)) -ge 45 ]; then
         for PKG in $APPS; do
-            su -c "rm -rf /data/data/$PKG/cache/*" > /dev/null 2>&1
+            PROC=$(pidof $PKG)
+            [ -z "$PROC" ] && { RESET=1; break; }
+            WIN=$(RUN "dumpsys window windows | grep $PKG")
+            [ -z "$WIN" ] && { RESET=1; break; }
         done
-        TIMER=$NOW
+        HEAVY_TIMER=$NOW
     fi
-
-    # Cek apakah ada akun yang keluar/Force Close
-    for PKG in $APPS; do
-        CHECK=$(su -c "dumpsys activity activities | grep 'mResumedActivity' | grep $PKG")
-        if [ -z "$CHECK" ]; then
-            echo -e "${R}[!] Terdeteksi Force Close pada: $PKG${NC}"
-            RESET=1
-            break
-        fi
-    done
-
-    # Jika ada aplikasi tertutup, lakukan pemulihan
+    
+    # Auto Recovery
     if [ $RESET -eq 1 ]; then
-        send_webhook "⚠️ **[ACL Manager]** Terdeteksi Force Close! Melakukan pembersihan RAM dan Auto-Restart..."
-        echo -e "${R}[!] Memulai proses pemulihan dalam 10 detik...${NC}"
-        sleep 10
-        for PKG in $APPS; do su -c "am force-stop $PKG"; done
-        sleep 2
-        su -c "input keyevent 3"; sleep 1
-        su -c "input keyevent 187"; sleep 2
-        echo -e "${Y}[*] Menutup aplikasi di background (Recent Apps)...${NC}"
-        for i in 1 2 3 4 5 6 7; do
-            su -c "input swipe 540 1000 540 100 250"
-            sleep 0.8
-        done
-        su -c "input keyevent 3"; sleep 1
-        run_setup
-        TIMER=$(date +%s)
-        continue 
+        for PKG in $APPS; do RUN "am force-stop $PKG"; done
+        sleep 2; RUN "input keyevent 3"; sleep 1; RUN "input keyevent 187"; sleep 1
+        for i in 1 2 3; do RUN "input swipe 540 800 540 100 200"; sleep 0.5; done
+        run_setup; TIMER=$(date +%s); continue
     fi
-
-    echo -e "${W}[$(date +%T)] Memantau kestabilan $TOTAL_APPS akun...${NC}"
     sleep 15
 done
