@@ -1,135 +1,162 @@
 #!/system/bin/sh
+# Lana Debloat Tool by lanavienrose
 
-# ==========================================
-#             WARNA UNTUK UI TERMUX
-# ==========================================
-R='\033[1;31m'  # Merah
-G='\033[1;32m'  # Hijau
-Y='\033[1;33m'  # Kuning
-C='\033[1;36m'  # Cyan
-W='\033[1;37m'  # Putih
-NC='\033[0m'    # Reset Warna
+BASE_URL="https://github.com/lucivaantarez/redfinger-setup/releases/latest/download"
+C="\033[36m"; G="\033[32m"; Y="\033[33m"; R="\033[31m"; D="\033[90m"; N="\033[0m"
 
-clear
-echo -e "${C}==========================================${NC}"
-echo -e "${G}       ROBLOX MANAGER BY ACL (CLEAN)      ${NC}"
-echo -e "${C}==========================================${NC}"
-echo -e ""
+cls() { printf "\033[2J\033[H"; }
 
-# 1. Meminta input Link Private Server
-read -p "$(echo -e ${Y}"[?] Tempelkan Link Private Server: "${NC})" LINK
-
-# 2. Meminta input Link Webhook Discord (Bisa dikosongkan)
-read -p "$(echo -e ${Y}"[?] Tempelkan Link Webhook Discord (Tekan Enter jika tidak pakai): "${NC})" WEBHOOK_URL
-echo -e ""
-
-# Mencari package dengan nama com.roblox.acl
-APPS=$(pm list packages | grep "com.roblox.acl" | cut -d ":" -f2)
-TIMER=$(date +%s)
-
-if [ -z "$APPS" ]; then
-    echo -e "${R}[!] Tidak ada aplikasi com.roblox.acl yang ditemukan. Pemasangan dibatalkan.${NC}"
-    exit
-fi
-
-TOTAL_APPS=$(echo "$APPS" | wc -w)
-
-# Fungsi untuk mengirim pesan ke Discord via Webhook
-send_webhook() {
-    local MSG=$1
-    if [ -n "$WEBHOOK_URL" ]; then
-        su -c "curl -s -H \"Content-Type: application/json\" -X POST -d \"{\\\"content\\\": \\\"$MSG\\\"}\" \"$WEBHOOK_URL\"" > /dev/null 2>&1
-    fi
+hdr() {
+  cls
+  printf "${C}================================================================${N}\n"
+  printf "${C}  Lana Debloat Tool  v1.0.0  (2026-03-04)${N}\n"
+  printf "${C}================================================================${N}\n\n"
 }
 
-set_screen() {
-    echo -e "${C}[*] Mengatur resolusi layar (wm density 164)...${NC}"
-    su -c "wm density 164"
-    sleep 1
-    su -c "service call window 101 i32 20"
+progress() {
+  label=$1
+  total=$2
+  shift 2
+  i=0
+  for pkg in "$@"; do
+    i=$((i+1))
+    pct=$((i * 100 / total))
+    printf "\r  ${C}%-20s${N} [${Y}%3d%%${N}] Progressing..." "$label" "$pct"
+    su -c "pm uninstall -k --user 0 $pkg" >/dev/null 2>&1
+  done
+  printf "\r  ${C}%-20s${N} [${G}100%%${N}] ${G}Completed!  ${N}\n"
 }
 
-run_setup() {
-    set_screen
-    send_webhook "🚀 **[ACL Manager]** Memulai eksekusi untuk $TOTAL_APPS akun..."
-    
-    IDX=0
-    for PKG in $APPS; do
-        T_Y=$(echo "250 610 950" | cut -d " " -f$(( (IDX % 3) + 1 )))
-        echo -e "${Y}[>] Membuka $PKG...${NC}"
-        su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        sleep 8  # Jeda nunggu Roblox terbuka penuh
-        
-        su -c "input keyevent 3"; sleep 1    # Jeda tombol Home
-        su -c "input keyevent 187"; sleep 2  # Jeda nunggu menu Recent Apps muncul
-        su -c "input tap 364 125"; sleep 1   # Jeda nunggu pop-up ikon muncul
-        su -c "input tap 357 343"; sleep 1.5 # Jeda nunggu Roblox jadi mode Freeform
-        
-        su -c "input swipe 300 250 680 $T_Y 600"
-        sleep 1.5 # Jeda nunggu jendela selesai digeser
-        
-        # --- PERUBAHAN: Delay 60 detik setiap selesai setting 1 akun ---
-        echo -e "${C}[*] Menunggu 60 detik sebelum lanjut ke akun berikutnya...${NC}"
-        sleep 30
-        
-        IDX=$((IDX + 1))
-    done
-    
-    echo -e "${C}[*] Mengembalikan fokus ke Termux...${NC}"
-    su -c "monkey -p com.termux -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-    sleep 2
-    
-    for PKG in $APPS; do
-        echo -e "${G}[>] Join Private Server: $PKG...${NC}"
-        su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        sleep 2
-        su -c "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" > /dev/null 2>&1
-        sleep 12
-    done
-    send_webhook "✅ **[ACL Manager]** Semua akun berhasil diarahkan ke Private Server!"
+install_pkg() {
+  name=$1; url=$2
+  printf "  ${C}%-20s${N} [${Y}  0%%${N}] Progressing..."
+  curl -sSL "$url" -o /sdcard/Download/"$name".apk 2>/dev/null
+  printf "\r  ${C}%-20s${N} [${Y} 50%%${N}] Progressing..."
+  r=$(su -c "pm install /sdcard/Download/$name.apk" 2>&1)
+  if echo "$r" | grep -q "Success"; then
+    printf "\r  ${C}%-20s${N} [${G}100%%${N}] ${G}Completed!  ${N}\n"
+  else
+    printf "\r  ${C}%-20s${N} [${R}ERR${N}]  ${R}Failed!     ${N}\n"
+  fi
 }
 
-run_setup
+do_bloat() {
+  hdr
+  printf "${C}+----------------------+--------+--------------+${N}\n"
+  printf "${C}| Task                 | Status | Progress     |${N}\n"
+  printf "${C}+----------------------+--------+--------------+${N}\n\n"
+  progress "Bloatware" 41 \
+    com.android.calendar com.android.email com.android.messaging \
+    com.android.music com.android.musicfx com.android.soundrecorder \
+    com.android.deskclock com.android.dreams.basic com.android.dreams.phototable \
+    com.android.quicksearchbox com.android.wallpaper.livepicker \
+    com.android.printspooler com.android.printservice.recommendation \
+    com.android.bookmarkprovider com.android.egg com.android.nfc \
+    com.android.bluetooth com.android.bluetoothmidiservice com.android.bips \
+    com.android.gallery3d com.android.contacts com.android.dialer \
+    com.android.emergency com.wsh.appstore com.wsh.toolkit \
+    com.android.protips com.android.hotspot2 com.baidu.cloud.service \
+    com.android.wallpapercropper com.android.wallpaperbackup com.android.traceur \
+    com.android.smspush com.android.simappdialog com.android.htmlviewer \
+    com.android.carrierconfig com.android.carrierdefaultapp \
+    com.android.cellbroadcastreceiver com.android.ons com.android.mtp \
+    android.ext.services com.google.android.apps.nbu.files
+}
 
-echo -e "\n${G}[*] Sistem Monitoring Aktif. Tekan CTRL+C di Termux untuk berhenti.${NC}\n"
+do_google() {
+  hdr
+  printf "${C}+----------------------+--------+--------------+${N}\n"
+  printf "${C}| Task                 | Status | Progress     |${N}\n"
+  printf "${C}+----------------------+--------+--------------+${N}\n\n"
+  progress "Google Apps" 5 \
+    com.android.vending com.google.android.play.games \
+    com.google.android.gsf com.google.android.gsf.login \
+    android.ext.shared
+}
 
-while true; do
-    NOW=$(date +%s)
-    
-    # Hapus Cache tiap 5 menit (300 detik)
-    if [ $((NOW - TIMER)) -ge 300 ]; then
-        echo -e "${C}[*] $(date +%T) - Membersihkan cache aplikasi...${NC}"
-        for PKG in $APPS; do
-            su -c "rm -rf /data/data/$PKG/cache/*" > /dev/null 2>&1
-        done
-        TIMER=$NOW
-    fi
+do_themes() {
+  hdr
+  printf "${C}+----------------------+--------+--------------+${N}\n"
+  printf "${C}| Task                 | Status | Progress     |${N}\n"
+  printf "${C}+----------------------+--------+--------------+${N}\n\n"
+  progress "Themes" 23 \
+    com.android.theme.color.black com.android.theme.color.cinnamon \
+    com.android.theme.color.green com.android.theme.color.ocean \
+    com.android.theme.color.orchid com.android.theme.color.purple \
+    com.android.theme.color.space com.android.theme.font.notoserifsource \
+    com.android.theme.icon.roundedrect com.android.theme.icon.squircle \
+    com.android.theme.icon.teardrop \
+    com.android.theme.icon_pack.circular.android \
+    com.android.theme.icon_pack.circular.launcher \
+    com.android.theme.icon_pack.circular.settings \
+    com.android.theme.icon_pack.circular.systemui \
+    com.android.theme.icon_pack.filled.android \
+    com.android.theme.icon_pack.filled.launcher \
+    com.android.theme.icon_pack.filled.settings \
+    com.android.theme.icon_pack.filled.systemui \
+    com.android.theme.icon_pack.rounded.android \
+    com.android.theme.icon_pack.rounded.launcher \
+    com.android.theme.icon_pack.rounded.settings \
+    com.android.theme.icon_pack.rounded.systemui
+}
 
-    # Cek apakah ada akun yang keluar/Force Close
-    for PKG in $APPS; do
-        CHECK=$(su -c "dumpsys activity activities | grep 'mResumedActivity' | grep $PKG")
-        if [ -z "$CHECK" ]; then
-            echo -e "${R}[!] Terdeteksi Force Close pada: $PKG${NC}"
-            send_webhook "⚠️ **[ACL Manager]** Terdeteksi Force Close pada $PKG! Menutup dan membuka ulang hanya akun tersebut..."
-            
-            # --- PERUBAHAN: Hanya menutup (force-stop) aplikasi yang crash ---
-            su -c "am force-stop $PKG"
-            sleep 2
-            
-            # Membuka kembali aplikasi yang crash agar tidak tertinggal
-            echo -e "${Y}[>] Membuka ulang $PKG...${NC}"
-            su -c "monkey -p $PKG -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-            sleep 10
-            
-            echo -e "${G}[>] Rejoin Private Server untuk: $PKG...${NC}"
-            su -c "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" > /dev/null 2>&1
-            sleep 12
-            
-            # Kembalikan fokus ke Termux
-            su -c "monkey -p com.termux -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
-        fi
-    done
+do_install() {
+  hdr
+  printf "${C}+----------------------+--------+--------------+${N}\n"
+  printf "${C}| App                  | Status | Progress     |${N}\n"
+  printf "${C}+----------------------+--------+--------------+${N}\n\n"
+  printf "  ${C}[1]${N} - MT Manager\n"
+  printf "  ${C}[2]${N} - Smart Launcher 6\n"
+  printf "  ${C}[3]${N} - Kernel Adiutor\n"
+  printf "  ${C}[4]${N} - 1.1.1.1 VPN\n"
+  printf "  ${C}[5]${N} - Install ALL\n"
+  printf "  ${D}[6] - Back${N}\n\n"
+  printf "${D}----------------------------------------------------------------${N}\n"
+  printf "${C}? Select an option : ${N}"; read ic
+  hdr
+  printf "${C}+----------------------+--------+--------------+${N}\n"
+  printf "${C}| App                  | Status | Progress     |${N}\n"
+  printf "${C}+----------------------+--------+--------------+${N}\n\n"
+  case "$ic" in
+    1) install_pkg "MT Manager"       "$BASE_URL/manager.apk" ;;
+    2) install_pkg "Smart Launcher 6" "$BASE_URL/launcher.apk" ;;
+    3) install_pkg "Kernel Adiutor"   "$BASE_URL/kernel.apk" ;;
+    4) install_pkg "1.1.1.1 VPN"      "$BASE_URL/vpn.apk" ;;
+    5) install_pkg "MT Manager"       "$BASE_URL/manager.apk"
+       install_pkg "Smart Launcher 6" "$BASE_URL/launcher.apk"
+       install_pkg "Kernel Adiutor"   "$BASE_URL/kernel.apk"
+       install_pkg "1.1.1.1 VPN"      "$BASE_URL/vpn.apk" ;;
+  esac
+}
 
-    echo -e "${W}[$(date +%T)] Memantau kestabilan $TOTAL_APPS akun...${NC}"
-    sleep 15
-done
+done_msg() {
+  printf "\n${D}----------------------------------------------------------------${N}\n"
+  printf "  ${G}All tasks completed.${N} Reboot recommended.\n\n"
+  sleep 2; cls
+}
+
+# MAIN
+hdr
+printf "${C}+----------------------+----------------------------------+${N}\n"
+printf "${C}| Option               | Action                           |${N}\n"
+printf "${C}+----------------------+----------------------------------+${N}\n"
+printf "  ${C}[1]${N} - Safe Bloatware\n"
+printf "  ${C}[2]${N} - Google Apps\n"
+printf "  ${C}[3]${N} - Theme & Icon Packs\n"
+printf "  ${Y}[4]${N} - Uninstall ALL\n"
+printf "  ${C}[5]${N} - Install Apps\n"
+printf "  ${Y}[6]${N} - Uninstall ALL + Install ALL\n"
+printf "  ${D}[0] - Exit${N}\n\n"
+printf "${D}----------------------------------------------------------------${N}\n"
+printf "${C}? Select an option : ${N}"; read ch
+
+case "$ch" in
+  1) do_bloat; done_msg ;;
+  2) do_google; done_msg ;;
+  3) do_themes; done_msg ;;
+  4) do_bloat; do_google; do_themes; done_msg ;;
+  5) do_install; done_msg ;;
+  6) do_bloat; do_google; do_themes; do_install; done_msg ;;
+  0) cls; exit 0 ;;
+  *) hdr; printf "  ${R}Invalid option.${N}\n\n" ;;
+esac
