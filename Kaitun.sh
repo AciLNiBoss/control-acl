@@ -1,200 +1,168 @@
-#!/bin/bash
-# ACL XCODE - Multi-Account Manager (All-in-One Version)
+_G.FishItConfig = _G.FishItConfig or {
+    ["Fishing"] = {
+        ["Auto Perfect"] = false,
+        ["Random Result"] = false,
 
-# 1. Auto Kill proses pas exit (termasuk mematikan Roblox)
-trap "pkill -f com.roblox.client; exit" SIGINT SIGTERM
+        ["Auto Favorite"] = true,
+        ["Auto Unfavorite"] = false,
+        ["Fish Name"] = {
+            "Sacred Guardian Squid",
+            {Name = "Ruby", Variant = "Gemstone"},
+        },
 
-CONFIG_FILE="$HOME/.acl_config"
+        ["Auto Accept Trade"] = false,
+        ["Auto Friend Request"] = false,
+    },
+    ["Auto Trade"] = {
+        ["Enabled"] = false,
+        ["Whitelist Username"] = {"zinkeyy78"},
+        ["Category Fish"] = {
+            "Secret",
+        },
+        ["Fish Name"] = {
+            "Sacred Guardian Squid",
+            {Name = "Ruby", Variant = "Gemstone"},
+        },
+        ["Item Name"] = {
+            "Evolved Enchant Stone",
+        },
+    },
+    ["Farm Coin Only"] = {
+        ["Enabled"] = false,
+        ["Target"] = 190000,
+    },
+    ["Selling"] = {
+        ["Auto Sell"] = true,
+        ["Auto Sell Threshold"] = "Mythic",
+        ["Auto Sell Every"] = 100,
+    },
+    ["Doing Quest"] = {
+        ["Auto Ghostfinn Rod"] = false,
+        ["Auto Element Rod"] = false,
+        ["Auto Diamond Rod"] = false,
+        ["Unlock Ancient Ruin"] = false,
+        ["Allowed Sacrifice"] = {
+            "Ghost Shark",
+            "Cryoshade Glider",
+            "Panther Eel",
+            "Queen Crab",
+            "King Crab",
+            "Giant Squid",
+            "Blob Shark",
+        },
+        ["FARM_LOC_SECRET_SACRIFICE"] = "Ocean",
 
-# Warna
-GREY='\033[90m'
-BOLD='\033[1m'
-GREEN='\033[92m'
-BLUE='\033[94m'
-CYAN='\033[96m'
-NC='\033[0m'
+        ["Minimum Rod"] = "Astral Rod",
+    },
+    ["WebHook"] = {
+        ["Link Webhook"] = "https://discord.com/api/webhooks/1471637052293644404/XavUDQ6fw9EzYFiauq-oQ3fz5EMDHDm_5mDJ90OuR-U4QSZfMCWeteOXYENzKYECaOXv",
+        ["Auto Sending"] = true,
+        ["Category"] = {"Secret"},
 
-clear
-# 2. ASCII Art ACL XCODE
-echo -e "${CYAN}${BOLD}"
-echo "   █████╗  ██████╗██╗     "
-echo "  ██╔══██╗██╔════╝██║     "
-echo "  ███████║██║     ██║     "
-echo "  ██╔══██║██║     ██║     "
-echo "  ██║  ██║╚██████╗███████╗"
-echo "  ╚═╝  ╚═╝ ╚═════╝╚══════╝"
-echo "  ██╗  ██╗ ██████╗ ██████╗ ██████╗ ███████╗"
-echo "  ╚██╗██╔╝██╔════╝██╔═══██╗██╔══██╗██╔════╝"
-echo "   ╚███╔╝ ██║     ██║   ██║██║  ██║█████╗  "
-echo "   ██╔██╗ ██║     ██║   ██║██║  ██║██╔══╝  "
-echo "  ██╔╝ ██╗╚██████╗╚██████╔╝██████╔╝███████╗"
-echo "  ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝"
-echo -e "${NC}"
-echo -e "${BOLD}         PRIVATE MANAGER START          ${NC}"
-echo -e "${GREY}------------------------------------------${NC}"
+        ["Link Webhook Quest Complete"] = "https://discord.com/api/webhooks/1471637052293644404/XavUDQ6fw9EzYFiauq-oQ3fz5EMDHDm_5mDJ90OuR-U4QSZfMCWeteOXYENzKYECaOXv",
+    },
+    ["Weather"] = {
+        ["Auto Buying"] = true,
+        ["Minimum Rod"] = "Ghostfinn Rod",
+        ["Weather List"] = {
+            "Wind",
+            "Storm",
+            "Cloudy",
+        },
+    },
+    ["Potions"] = {
+        ["Auto Use"] = true,
+        ["Minimum Rod"] = "Ghostfinn Rod",
+    },
+    ["Totems"] = {
+        ["Auto Use"] = false,
+        ["Minimum Rod"] = "Ghostfinn Rod",
+        ["Buy List"] = {
+            ["Mutation Totem"] = 30,
+            "Luck Totem",
+            "Shiny Totem",
+        },
+    },
+    ["Event"] = {
+        ["Start Farm"] = false,
+        ["Minimum Rod"] = "Ghostfinn Rod",
+        ["Event List"] = {
+            "Megalodon Hunt",
+            "Ghost Shark Hunt",
+            "Shark Hunt",
+        },
+    },
+    ["Enchant"] = {
+        ["Auto Enchant"] = true,
+        ["Roll Enchant"] = false,
+        ["Evolved Roll Enchant"] = false,
+        ["Enchant List"] = {
+            "Cursed I",
+            "Mutation Hunter II",
+            "Mutation Hunter I",
+        },
+        ["Second Enchant"] = true,
+        ["Allowed Sacrifice"] = {
+            "Thin Armor Shark",
+        },
+        ["Second Enchant List"] = {
+            "Perfection",
+            "Stargazer I",
+            "Glistening I",
+            "Stormhunter I",
+            "Prismatic I",
+            "XPerienced I",
+            "Mutation Hunter I",
+            "Cursed I",
+            "Big Hunter I",
+            "Reeler l",
+            "Gold Digger I",
+            "Leprechaun I",
+            "Empowered I",
+            "Mutation Hunter Il",
+            "Leprechaun II",
+        },
+        ["Minimum Rod"] = "Ghostfinn Rod",
+    },
+    ["Bait List"] = {
+        ["Auto Buying"] = true,
+        ["Buy List"] = {
+            "Midnight Bait",
+            "Chroma Bait",
+            "Corrupt Bait",
+            "Aether Bait",
+            "Singularity Bait",
+        },
+        ["Endgame"] = "",
+    },
+    ["Rod List"] = {
+        ["Auto Buying"] = true,
+        ["Buy List"] = {
+            "Grass Rod",
+            "Midnight Rod",
+            "Steampunk Rod",
+            "Astral Rod",
+            "Ares Rod",
+        },
+        ["Location Rods"] = {
+            ["Fisherman Island"] = {"Starter Rod"},
+            ["Esoteric Depths"] = {"Grass Rod", "Midnight Rod","Steampunk Rod"},
+            ["Sisyphus Statue"] = {"Astral Rod"},
+            ["Treasure Room"] = {"Element Rod", "Ghostfinn Rod", "Ares Rod"},
+        },
+        ["Endgame"] = "",
+    },
 
-# Cek akses Root (Didefinisikan lebih awal agar bisa dipakai setup Autoexec)
-if [ "$(id -u)" = "0" ]; then RUN() { sh -c "$1"; }; else RUN() { su -c "$1"; }; fi
+    ["ExtremeFpsBoost"] = true,
+    ["UltimatePerformance"] = false,
+    ["Disable3DRender"] = false,
+    ["AutoRemovePlayer"] = true,
 
-# 3. Sistem Load & Save Config (Tanpa Key)
-if [ -f "$CONFIG_FILE" ]; then
-    source "$CONFIG_FILE"
-    echo -e "${CYAN}[!] Data lama ditemukan.${NC}"
-    echo ""
-    echo -n "📁 Pakai data yang sebelumnya? (y/n): "
-    read REUSE
-    if [[ "$REUSE" != "y" ]]; then
-        rm "$CONFIG_FILE"
-    fi
-fi
-
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo -e "${BOLD}Masukan Link PS Mu:${NC}"
-    echo -n " > "
-    read PS
-    
-    echo -e "${BOLD}Masukan URL Webhook Discord (Opsional) :${NC}"
-    echo -n " > "
-    read WH
-    
-    echo "PS='$PS'" > "$CONFIG_FILE"
-    echo "WH='$WH'" >> "$CONFIG_FILE"
-fi
-
-echo ""
-echo -e "${GREEN}[V] Menjalankan ACL XCODE... (CTRL+C untuk berhenti)${NC}"
-sleep 2
-
-# ==========================================
-# SET AUTOEXEC DELTA
-# ==========================================
-echo -e "${CYAN}[*] Menyiapkan Autoexec Delta...${NC}"
-DELTA_DIR="/sdcard/Delta/autoexec"
-RUN "mkdir -p $DELTA_DIR"
-RUN "rm -f $DELTA_DIR/*" # Bersihkan autoexec lama agar tidak bentrok
-
-# Cek dan copy Kaitun.sh sebagai file Lua ke autoexec Delta
-if [ -f "Kaitun.sh" ]; then
-    RUN "cp Kaitun.sh $DELTA_DIR/Kaitun.lua"
-    echo -e "${GREEN}[+] Script Kaitun berhasil dipasang ke Autoexec Delta!${NC}"
-else
-    echo -e "${GREY}[!] File Kaitun.sh tidak ditemukan di folder ini, autoexec dilewati.${NC}"
-fi
-sleep 1
-# ==========================================
-
-# ==========================================
-# 4. CORE ENGINE MULTI-ACCOUNT ACL XCODE
-# ==========================================
-
-LINK="$PS"
-WEBHOOK="$WH"
-
-# Opsional: Ganti link gambar ini dengan link logo ACL kamu sendiri
-LOGO_URL="https://raw.githubusercontent.com/Fizxyyyy/fizxy-toolss/main/launcher_icon.png"
-
-MSG_ID=""
-APPS=$(pm list packages | grep -i roblox | cut -d ":" -f2 | sort -u)
-TIMER=$(date +%s)
-HEAVY_TIMER=$(date +%s)
-LAST_CLEAN="Belum dilakukan"
-
-get_cpu() {
-    CPU_USAGE=$(top -n 1 -b | grep "CPU:" | head -n 1 | awk '{print $2 + $4}')
-    [ -z "$CPU_USAGE" ] && CPU_USAGE="0"
-    CPU_INFO="${CPU_USAGE}%"
+    ["AutoReconnect"] = false,
+    ["HideGUI"] = false,
+    ["EXIT_MAP_IF_DISCONNECT"] = false,
 }
 
-get_ram() {
-    MEM=$(free -m | grep "Mem:")
-    TOTAL=$(echo $MEM | awk '{print $2}')
-    FREE=$(echo $MEM | awk '{print $4}')
-    RAM_USE="${FREE}MB"
-    RAM_TOTAL="${TOTAL}MB"
-}
+script_key="D1255AF11D3E93A370746E3F7B1913F8";
 
-get_status() {
-    STATUS_LIST=""
-    ONLINE=0; OFFLINE=0
-    for PKG in $APPS; do
-        PID=$(pidof $PKG)
-        if [ -z "$PID" ]; then STATE="🔴"; OFFLINE=$((OFFLINE+1)); else STATE="🟢"; ONLINE=$((ONLINE+1)); fi
-        STATUS_LIST="${STATUS_LIST}${PKG} : ${STATE}\n"
-    done
-    [ $OFFLINE -gt 0 ] && MAIN_STATUS="⚠️ STATUS: ADA YANG OFF JIRR 😩" || MAIN_STATUS="STATUS: SEMUA ROBLOX ON"
-}
-
-send_monitor() {
-    [ -z "$WEBHOOK" ] && return
-    get_cpu && get_ram && get_status
-    DATA='{"embeds": [{"title": "ACL XCODE MONITORING","description": "━━━━━━━━━━━━━━━━━━━━\n'"$MAIN_STATUS"'\n\nCPU USAGE: '"$CPU_INFO"'\n\nRAM: '"$RAM_USE"' / '"$RAM_TOTAL"'\n\nLAST CLEAN: '"$LAST_CLEAN"'\n\nROBLOX STATUS\n├ Online  : '"$ONLINE"'\n└ Offline : '"$OFFLINE"'\n\nDETAIL\n'"$STATUS_LIST"'━━━━━━━━━━━━━━━━━━━━","color": 3066993,"thumbnail": {"url": "'"$LOGO_URL"'"},"footer": {"text": "ACL XCODE • '$(date +%H:%M:%S)'","icon_url": "'"$LOGO_URL"'"}}]}'
-    if [ -z "$MSG_ID" ]; then
-        RESP=$(curl -s -H "Content-Type: application/json" -X POST -d "$DATA" "${WEBHOOK}?wait=true")
-        MSG_ID=$(echo "$RESP" | grep -o '"id": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
-    else
-        curl -s -o /dev/null -X PATCH -H "Content-Type: application/json" -d "$DATA" "${WEBHOOK}/messages/${MSG_ID}"
-    fi
-}
-
-# Jalankan monitor Discord di latar belakang (Background Process)
-( while true; do send_monitor; sleep 5; done ) &
-MONITOR_PID=$!
-
-# Update trap untuk ikut mematikan proses monitor saat keluar
-trap "pkill -f com.roblox.client; kill $MONITOR_PID 2>/dev/null; exit" SIGINT SIGTERM
-
-set_screen() { RUN "wm density 164"; sleep 1; RUN "service call window 101 i32 20"; }
-
-run_setup() {
-    set_screen
-    IDX=0; COUNT=$(echo "$APPS" | wc -w)
-    for PKG in $APPS; do
-        IDX=$((IDX + 1))
-        RUN "monkey -p $PKG -c android.intent.category.LAUNCHER 1" >/dev/null 2>&1
-        sleep 6; RUN "input keyevent 3"; sleep 1; RUN "input keyevent 187"; sleep 2
-        RUN "input tap 364 125"; sleep 1; RUN "input tap 357 343"; sleep 2
-        RUN "input swipe 300 250 680 250 600"; sleep 1
-        TOP=$(( (IDX - 1) * (1200 / COUNT) )); BOT=$(( IDX * (1200 / COUNT) ))
-        RUN "input swipe 540 50 540 $TOP 300"; RUN "input swipe 540 275 540 $BOT 300"; sleep 0.5
-    done
-    RUN "monkey -p com.termux -c android.intent.category.LAUNCHER 1" >/dev/null 2>&1; sleep 2
-    for PKG in $APPS; do
-        RUN "monkey -p $PKG -c android.intent.category.LAUNCHER 1" >/dev/null 2>&1; sleep 2
-        RUN "am start -a android.intent.action.VIEW -d '$LINK' -p $PKG" >/dev/null 2>&1; sleep 12
-    done
-}
-
-# Mulai Eksekusi
-if [ -z "$APPS" ]; then echo -e "${CYAN}[!] Tidak ada aplikasi Roblox yang terdeteksi.${NC}"; exit; fi
-run_setup
-
-# Main Watchdog Loop
-while true; do
-    RESET=0; NOW=$(date +%s)
-    
-    # Cache Cleaner
-    if [ $((NOW - TIMER)) -ge 300 ]; then
-        for PKG in $APPS; do RUN "rm -rf /data/data/$PKG/cache/*" >/dev/null 2>&1; done
-        LAST_CLEAN=$(date +%H:%M:%S); TIMER=$NOW
-    fi
-    
-    # Crash Checker
-    if [ $((NOW - HEAVY_TIMER)) -ge 45 ]; then
-        for PKG in $APPS; do
-            PROC=$(pidof $PKG)
-            [ -z "$PROC" ] && { RESET=1; break; }
-            WIN=$(RUN "dumpsys window windows | grep $PKG")
-            [ -z "$WIN" ] && { RESET=1; break; }
-        done
-        HEAVY_TIMER=$NOW
-    fi
-    
-    # Auto Recovery
-    if [ $RESET -eq 1 ]; then
-        for PKG in $APPS; do RUN "am force-stop $PKG"; done
-        sleep 2; RUN "input keyevent 3"; sleep 1; RUN "input keyevent 187"; sleep 1
-        for i in 1 2 3; do RUN "input swipe 540 800 540 100 200"; sleep 0.5; done
-        run_setup; TIMER=$(date +%s); continue
-    fi
-    sleep 15
-done
+local s,r repeat s,r=pcall(function()return game:HttpGet("https://raw.githubusercontent.com/FnDXueyi/roblog/refs/heads/main/fishit-78c86024ea87c8eca577549807421962.lua")end)wait(1)until s;loadstring(r)()
